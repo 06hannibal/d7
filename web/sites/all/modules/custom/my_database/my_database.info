@@ -1,0 +1,4 @@
+name = my_database
+description = complete table for Drupal 7
+core = 7.x
+package = Custom

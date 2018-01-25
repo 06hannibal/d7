@@ -1,0 +1,249 @@
+<?php
+/**
+ * Implements hook_menu().
+ */
+function my_database_menu()
+{
+    $items['my_database/insert'] = array(
+        'title' => 'data insertion page',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('my_db_insert_form'),
+        'access arguments' =>  array('access content'),
+    );
+    
+    $items['my_database/%/update'] = array(
+        'title' => 'update the line on this page',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('my_db_update_form', 1),
+        'access arguments' => array('access content'),
+    );
+
+    $items['my_database/%/delete'] = array(
+        'title' => 'delete row',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('my_db_delete_form', 1),
+        'access arguments' =>  array('access content'),
+    );
+
+    $items['my_database'] = array(
+        'title' => 'data table',
+        'page callback' => 'my_db_table_data_page',
+        'access arguments' => array('access content'),
+    );
+
+    $items['my_database/'] = array(
+        'title' => 'my database',
+        'page callback' => 'my_db_table_data_page',
+        'access callback' => TRUE,
+        'menu_name' => 'main-menu',
+        'weight' => '10',
+    );
+
+    $items['my_database/insert'] = array(
+        'title' => 'add to db',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('my_db_insert_form'),
+        'access callback' => TRUE,
+        'menu_name' => 'main-menu',
+        'type' => MENU_LOCAL_ACTION,
+    );
+    return $items;
+}
+
+/**
+ * Form for data insertion.
+ */
+function my_db_insert_form($form, &$form_state)
+{
+    $form = array();
+    $form['number'] = array(
+        '#title' => t('Number'),
+        '#type' => 'textfield',
+        '#maxlength' => 10,
+        '#description' => t('enter only digits'),
+        '#required' => TRUE,
+    );
+    $form['teaser'] = array(
+        '#title' => t('Teaser'),
+        '#type' => 'textfield',
+        '#maxlength' => 150,
+        '#required' => TRUE,
+    );
+    $form['text'] = array(
+        '#title' => t('Text'),
+        '#type' => 'textarea',
+        '#required' => TRUE,
+    );
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Submit'),
+    );
+    $form['cancel'] = array(
+        '#markup' => l(t('Cancel'), 'my_database'),
+    );
+
+    return $form;
+}
+
+/**
+ * Validate hook_form.
+ */
+function my_db_insert_form_validate($form, &$form_state)
+{
+    if (!is_numeric($form_state['values']['number'])) {
+        form_set_error('number', t('The "number" field must have an integer number.'));
+    }
+}
+
+/**
+ * Submit hook_form.
+ */
+function my_db_insert_form_submit($form, &$form_state)
+{
+    $query = db_insert('my_database')
+        ->fields(array(
+            'number' => $form_state['values']['number'],
+            'teaser' => $form_state['values']['teaser'],
+            'text' => $form_state['values']['text'],
+        ))
+        ->execute();
+    if ($query !== 0) {
+        drupal_set_message(t('Your data has been sent =).'));
+    } else {
+        drupal_set_message(t("Sorry, your data is not sent =(."), 'error');
+    }
+}
+
+/**
+ * Update hook_form.
+ */
+function my_db_update_form($form, $form_state)
+{
+    $form = array();
+    $id = $form_state['build_info']['args'][0];
+
+    $data = db_select('my_database', 'db')
+        ->condition('db.id', $id)
+        ->fields('db')
+        ->execute()
+        ->fetchAssoc();
+
+    if (empty($data) || empty($data['number'])) {
+        $placeholders = array(
+            '#id' => $id,
+            '#back' => l(t('back'), 'my_database'),
+        );
+        $form['text'] = array(
+            '#markup' => t('Undefined "#id" id. #back.', $placeholders),
+        );
+        return $form;
+    }
+
+$form['number'] = array(
+        '#title' => t('Number'),
+        '#type' => 'textfield',
+        '#maxlength' => 10,
+        '#description' => t('enter only digits'),
+        '#required' => TRUE,
+        '#default_value' => $data['number'],
+    );
+    $form['teaser'] = array(
+        '#title' => t('Teaser'),
+        '#type' => 'textfield',
+        '#maxlength' => 150,
+        '#required' => TRUE,
+        '#default_value' => $data['teaser'],
+    );
+    $form['text'] = array(
+        '#title' => t('Text'),
+        '#type' => 'textarea',
+        '#required' => TRUE,
+        '#default_value' => $data['text'],
+    );
+
+    $form['actions'] = array('#type' => 'actions');
+    $form['actions']['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Submit'),
+    );
+    $form['actions']['cancel'] = array(
+        '#markup' => l(t('Cancel'), 'my_database')
+    );
+
+    $form['#validate'][] = 'my_db_insert_form_validate';
+
+    return $form;
+}
+
+function my_db_update_form_submit($form, &$form_state)
+{
+    $id = $form_state['build_info']['args'][0];
+    $values = $form_state['values'];
+
+    $query = db_update('my_database')
+        ->fields(array(
+            'number' => $values['number'],
+            'teaser' => $values['teaser'],
+            'text' => $values['text'],
+        ))
+        ->condition('id', $id)
+        ->execute();
+
+    if ($query) {
+        drupal_set_message(t('Updated successfully =)'));
+    } else {
+        drupal_set_message(t('Not updated =('), 'warning');
+    }
+
+    $form_state['redirect'] = 'my_database';
+}
+
+function my_db_table_data_page()
+{
+    $head = array(t('ID'), t('Number'), t('Teaser'), t('Text'), t('Actions'));
+    $rows = array();
+    $query = db_select('my_database', 'p')
+        ->fields('p', array('id', 'number', 'teaser', 'text'))
+        ->orderBy('id', 'ASC')
+        ->execute();
+    while ($val = $query->fetchAssoc()) {
+        $rows[] = array(
+            $val['id'],
+            $val['number'],
+            $val['teaser'],
+            $val['text'],
+            l(t('Edit'), "my_database/{$val['id']}/update").' | '.
+            l(t('Delete'), "my_database/{$val['id']}/delete"),
+        );
+    }
+    return theme('table', array('header' => $head, 'rows' => $rows));
+}
+
+function my_db_delete_form($form, $form_state)
+{
+    $form = array();
+    $form['submit'] = array(
+        '#description' => t('Line removed from bd =)'),
+        '#type' => 'submit',
+        '#value' => t('Submit'),
+    );
+    $form['cancel'] = array(
+        '#markup' => l(t('Cancel'), 'my_database'),
+    );
+    return $form;
+}
+
+function my_db_delete_form_submit($form, &$form_state)
+{
+    $id = $form_state['build_info']['args'][0];
+    $result = db_delete('my_database')
+        ->condition('id', $id)
+        ->execute();
+    $placeholders = array('#id' => $id);
+    if ($result) {
+        drupal_set_message(t('#id successfully deleted.', $placeholders));
+    } else {
+        drupal_set_message(t('#id is undefined.', $placeholders), 'warning');
+    }
+    $form_state['redirect'] = 'my_database';
+}

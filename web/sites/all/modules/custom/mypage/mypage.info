@@ -1,0 +1,5 @@
+; &Id:$
+name = My Page
+description = my page and not found and access denied using hook_menu()
+core = 7.x
+package = Custom

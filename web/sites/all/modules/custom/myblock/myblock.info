@@ -1,0 +1,5 @@
+; &Id:$
+name = My Block
+description = My Block hook_block_info & hook_block_view
+core = 7.x
+package = Custom

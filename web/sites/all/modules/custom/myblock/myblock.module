@@ -1,0 +1,46 @@
+<?php
+/**
+ * Implements hook_block_info().
+ */
+function myblock_block_info()
+{
+    $blocks = array();
+    $blocks['myblock'] = array(
+        'info' => t('My custom Block'),
+        'cache' => DRUPAL_NO_CACHE,
+    );
+    
+    return $blocks;
+}
+/**
+ * Implements hook_block_view().
+ */
+function myblock_block_view($delta = '')
+{
+    $block = array();
+switch ($delta) {
+    case 'myblock':
+    if(!user_access('myblock_permission')){
+                drupal_set_message('Access to view this content is denied.');
+            }else{
+                $block['subject'] = t('Drupal 7');
+                $block['content'] = t('<p>
+  <b>Drupal</b> – is a free and open source content-management framework written in PHP and distributed under the GNU General Public License. Drupal provides a back-end framework for at least 2.3% of all web sites worldwide – ranging from personal blogs to corporate, political, and government sites. Systems also use Drupal for knowledge management and for business collaboration.
+  </p>');
+            }
+            break;
+    }
+    return $block;
+}
+/**
+ * Implements hook_permission().
+ */
+function myblock_permission()
+{
+  return [
+        'myblock_custom_permission' => [
+            'title' => t('myblock Custom Permission'),
+            'description' => t('Explain what this permission allows the user to do.'),
+        ],
+    ];  
+}
